@@ -4,29 +4,40 @@ const { auth, JWT_SECRET } = require("./auth");
 const jwt = require("jsonwebtoken");
 const mongoose = require("mongoose");
 const dotenv = require("dotenv");
+const bcrypt = require("bcrypt")
+
 dotenv.config()
 
 const databaseUrl = process.env.DATABASE_URL;
-// console.log("DB URL: ", process.env.DATABASE_URL)
 mongoose.connect(databaseUrl)
+
+const saltRounds = 10
 
 const app = express();
 app.use(express.json());
 
 app.post("/signup", async function(req, res) {
     const email = req.body.email;
-    const password = req.body.password;
+    const password = await bcrypt.hash(req.body.password, saltRounds);
     const name = req.body.name;
 
-    await UserModel.create({
-        email: email,
-        password: password,
-        name: name
-    });
-    
-    res.json({
-        message: "You are signed up"
-    })
+    try{
+        await UserModel.create({
+            email: email,
+            password: password,
+            name: name
+        });
+        
+        res.json({
+            message: "You are signed up"
+        })
+    }
+    catch(err){
+        console.log(err)
+        res.json({
+            "message":"You have already signed up!"
+        })
+    }
 });
 
 
@@ -34,24 +45,31 @@ app.post("/signin", async function(req, res) {
     const email = req.body.email;
     const password = req.body.password;
 
-    const response = await UserModel.findOne({
-        email: email,
-        password: password,
-    });
+    const user = await UserModel.findOne({
+        email: email
+    })
 
-    if (response) {
-        const token = jwt.sign({
-            id: response._id.toString()
-        }, JWT_SECRET);
-
-        res.json({
-            token
-        })
-    } else {
-        res.status(403).json({
-            message: "Incorrect creds"
+    
+    if(!user){
+        return res.status(403).send({
+            "message":"Invalid creds"
         })
     }
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if(!isMatch){
+        return res.status(403).send({
+            "message":"Invalid creds"
+        })
+    }
+
+    const token = jwt.sign({
+        id: user._id.toString()
+    }, JWT_SECRET)
+
+    res.json({
+        token: token
+    })
 });
 
 
@@ -59,11 +77,10 @@ app.post("/todo", auth, async function(req, res) {
     const userId = req.userId;
     const title = req.body.title;
     const done = req.body.done;
-
     await TodoModel.create({
         userId,
         title,
-        done
+        done,
     });
 
     res.json({

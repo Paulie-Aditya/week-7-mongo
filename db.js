@@ -13,7 +13,7 @@ const Todo = new Schema({
     userId: ObjectId,
     title: String,
     done: Boolean
-});
+}, { timestamps: true });
 
 const UserModel = mongoose.model('users', User);
 const TodoModel = mongoose.model('todos', Todo);
