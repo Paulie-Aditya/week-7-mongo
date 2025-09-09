@@ -3,8 +3,12 @@ const { UserModel, TodoModel } = require("./db");
 const { auth, JWT_SECRET } = require("./auth");
 const jwt = require("jsonwebtoken");
 const mongoose = require("mongoose");
+const dotenv = require("dotenv");
+dotenv.config()
 
-mongoose.connect("")
+const databaseUrl = process.env.DATABASE_URL;
+// console.log("DB URL: ", process.env.DATABASE_URL)
+mongoose.connect(databaseUrl)
 
 const app = express();
 app.use(express.json());
@@ -80,4 +84,6 @@ app.get("/todos", auth, async function(req, res) {
     })
 });
 
-app.listen(3000);
+app.listen(3000, ()=> {
+    console.log("Server is running")
+});
